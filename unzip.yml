@@ -1,0 +1,26 @@
+name: Unzip Project
+
+on:
+  push:
+    paths:
+      - "linktree-ready-full.zip"
+
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Unzip the project
+        run: |
+          unzip -o linktree-ready-full.zip -d .
+          rm linktree-ready-full.zip
+
+      - name: Commit unzipped files
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add .
+          git commit -m "Unzipped project"
+          git push
