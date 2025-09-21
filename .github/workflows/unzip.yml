@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "linktree-ready-full.zip"
-
+      
 jobs:
   unzip:
     runs-on: ubuntu-latest
