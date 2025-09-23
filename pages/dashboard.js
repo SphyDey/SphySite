@@ -9,8 +9,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
-  const [bio, setBio] = useState('')
-
   const router = useRouter()
 
   useEffect(() => {
@@ -28,15 +26,10 @@ export default function Dashboard() {
   async function loadProfile(id) {
     const { data } = await supabase.from('profiles').select('*').eq('id', id).single()
     setProfile(data)
-    setBio(data?.bio || '')
   }
 
   async function loadLinks(id) {
-    const { data } = await supabase
-      .from('links')
-      .select('*')
-      .eq('user_id', id)
-      .order('position')
+    const { data } = await supabase.from('links').select('*').eq('user_id', id).order('position')
     setLinks(data || [])
     setLoading(false)
   }
@@ -58,7 +51,7 @@ export default function Dashboard() {
 
   async function deleteLink(id) {
     await supabase.from('links').delete().eq('id', id)
-    setLinks(links.filter((l) => l.id !== id))
+    setLinks(links.filter(l => l.id !== id))
   }
 
   async function uploadAvatar(ev) {
@@ -66,17 +59,14 @@ export default function Dashboard() {
     if (!file) return
     const ext = file.name.split('.').pop()
     const path = `${user.id}/avatar.${ext}`
-    const { error } = await supabase.storage
+
+    const { error: uploadError } = await supabase.storage
       .from('avatars')
       .upload(path, file, { upsert: true })
-    if (error) return alert(error.message)
+    if (uploadError) return alert(uploadError.message)
+
     const { data } = supabase.storage.from('avatars').getPublicUrl(path)
     await supabase.from('profiles').update({ avatar_url: data.publicUrl }).eq('id', user.id)
-    loadProfile(user.id)
-  }
-
-  async function saveBio() {
-    await supabase.from('profiles').update({ bio }).eq('id', user.id)
     loadProfile(user.id)
   }
 
@@ -89,38 +79,43 @@ export default function Dashboard() {
 
   return (
     <div className="container">
-      <div className="card space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
+      <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 className="text-xl font-bold">Dashboard</h2>
-            <p className="text-gray-500">@{profile?.username || user.email}</p>
+            <h2>Dashboard</h2>
+            <p style={{ color: '#6b7280' }}>{profile?.username || user.email}</p>
             <a
-              href={(process.env.NEXT_PUBLIC_SITE_URL || '') + '/u/' + (profile?.username || '')}
+              href={(process.env.NEXT_PUBLIC_SITE_URL || '') + '/u/' + (profile?.username || user.id)}
               target="_blank"
               rel="noreferrer"
-              className="text-blue-600"
             >
               View public page
             </a>
           </div>
-          <button className="btn" onClick={signOut}>Sign out</button>
+          <div>
+            <button className="btn" onClick={signOut}>
+              Sign out
+            </button>
+          </div>
         </div>
 
-        <hr />
+        <hr style={{ margin: '12px 0' }} />
 
-        {/* Profile */}
-        <div>
-          <h3 className="font-semibold">Profile</h3>
+        <div style={{ marginTop: 8 }}>
+          <h3>Profile</h3>
+          <p>Bio</p>
           <textarea
-            className="input w-full mt-2"
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
+            className="input"
+            value={profile?.bio || ''}
+            onChange={e =>
+              supabase
+                .from('profiles')
+                .update({ bio: e.target.value })
+                .eq('id', profile.id)
+                .then(() => loadProfile(user.id))
+            }
           />
-          <button onClick={saveBio} className="btn mt-2 bg-gray-800 text-white">
-            Save Bio
-          </button>
-          <div className="mt-4">
+          <div style={{ marginTop: 8 }}>
             <label className="btn">
               Upload avatar
               <input type="file" onChange={uploadAvatar} style={{ display: 'none' }} />
@@ -128,28 +123,51 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Links */}
-        <div>
-          <h3 className="font-semibold">Your Links</h3>
-          <form onSubmit={addLink} className="grid gap-2 mt-2">
-            <input className="input" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
-            <input className="input" placeholder="https://example.com" value={url} onChange={(e) => setUrl(e.target.value)} />
-            <button className="btn bg-gray-800 text-white">Add link</button>
+        <div style={{ marginTop: 12 }}>
+          <h3>Your links</h3>
+          <form onSubmit={addLink} style={{ display: 'grid', gap: 8, marginTop: 8 }}>
+            <input
+              className="input"
+              placeholder="Title"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+            />
+            <input
+              className="input"
+              placeholder="https://example.com"
+              value={url}
+              onChange={e => setUrl(e.target.value)}
+            />
+            <button className="btn" style={{ background: '#111827', color: '#fff' }}>
+              Add link
+            </button>
           </form>
 
-          <div className="mt-4 space-y-2">
-            {links.map((l) => (
+          <div style={{ marginTop: 10 }}>
+            {links.map(l => (
               <div
                 key={l.id}
-                className="flex justify-between items-center border p-2 rounded"
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  border: '1px solid #e5e7eb',
+                  padding: 8,
+                  borderRadius: 8,
+                  marginBottom: 8
+                }}
               >
                 <div>
-                  <div className="font-semibold">{l.title}</div>
-                  <a href={l.url} target="_blank" className="text-blue-600">
+                  <div style={{ fontWeight: 600 }}>{l.title}</div>
+                  <a href={l.url} target="_blank" style={{ color: '#2563eb' }}>
                     {l.url}
                   </a>
                 </div>
-                <button className="btn" onClick={() => deleteLink(l.id)}>Delete</button>
+                <div>
+                  <button className="btn" onClick={() => deleteLink(l.id)}>
+                    Delete
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -157,4 +175,4 @@ export default function Dashboard() {
       </div>
     </div>
   )
-    }
+      }
